@@ -13,17 +13,4 @@
   ]
 }
 
-{
-  "build": {
-    "env": {
-      "OPENCV_VERSION": "4.5.4.58"
-    },
-    "env": {
-      "CXX": "g++-8",
-      "CC": "gcc-8"
-    },
-    "scripts": {
-      "build": "python3 -m pip install -r requirements.txt"
-    }
-  }
-}
+
