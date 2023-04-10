@@ -2,17 +2,15 @@ from io import BytesIO
 import requests
 import os
 import re
-
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageMessage, ImageSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage,ImageMessage
 
-app = Flask(__name__)
+import os
 
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
-handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
-
+line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 working_status = os.getenv("DEFALUT_TALKING", default = "true").lower() == "true"
 
 def read_image_from_url(url):
@@ -32,39 +30,50 @@ def recognize_text_in_image(image_url):
         return None
     return response_data['ParsedResults'][0]['ParsedText']
 
-@app.route("/")
-def home():
-    return "Hello, World!"
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    signature = request.headers["X-Line-Signature"]
+app = Flask(__name__)
+
+# domain root
+@app.route('/')
+def home():
+    return 'Hello, World!'
+
+@app.route("/webhook", methods=['POST'])
+def callback():
+    # get X-Line-Signature header value
+    signature = request.headers['X-Line-Signature']
+    # get request body as text
     body = request.get_data(as_text=True)
+    app.logger.info("Request body: " + body)
+    # handle webhook body
     try:
-        handler.handle(body, signature)
+        line_handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-    return "OK"
+    return 'OK'
 
-@handler.add(MessageEvent, message=TextMessage)
-def handle_text_message(event):
+@line_handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
     global working_status
-    if not working_status:
+
+    if event.message.type != "text":
         return
+
     if event.message.text == "啟動":
         working_status = True
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="我是時下流行的 AI 智能，目前可以為您服務囉，歡迎來跟我互動~")
-        )
-    elif event.message.text == "安靜":
+            TextSendMessage(text="我是時下流行的AI智能，目前可以為您服務囉，歡迎來跟我互動~"))
+        return
+
+    if event.message.text == "安靜":
         working_status = False
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="感謝您的使用，若需要我的服務，請跟我說「啟動」，謝謝~")
-        )
-
-@handler.add(MessageEvent, message=ImageMessage)
+            TextSendMessage(text="感謝您的使用，若需要我的服務，請跟我說 「啟動」 謝謝~"))
+        return
+	
+@line_handler.add(MessageEvent, message=ImageMessage)
 def handle_image_message(event):
     global working_status
     if not working_status:
@@ -92,5 +101,6 @@ def handle_image_message(event):
         TextSendMessage(text=text)
     )
 
-if __name__ == "__main__":
+
+if __name__ == "main":
     app.run()
