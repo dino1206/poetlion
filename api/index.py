@@ -1,13 +1,15 @@
-from io import BytesIO
-import requests
+import cv2
+import pytesseract
+import numpy as np
 import os
 import re
 from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage,ImageMessage
+import requests
+from linebot import LineBotApi, WebhookHandler
 
-import os
+
 
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
@@ -15,21 +17,16 @@ working_status = os.getenv("DEFALUT_TALKING", default = "true").lower() == "true
 
 def read_image_from_url(url):
     image_data = requests.get(url).content
-    return BytesIO(image_data)
+    return np.asarray(bytearray(image_data), dtype=np.uint8)
 
 def recognize_text_in_image(image_url):
-    image_file = read_image_from_url(image_url)
-    response = requests.post(
-        'https://api.ocr.space/parse/image',
-        files={'image': image_file},
-        data={'apikey': 'K83057456588957',
-              'language': 'chi_tra'}
-    )
-    response_data = response.json()
-    if response_data['OCRExitCode'] != 1:
-        return None
-    return response_data['ParsedResults'][0]['ParsedText']
-
+    image_data = read_image_from_url(image_url)
+    img = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    adaptive_threshold = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv2.THRESH_BINARY,11,2)
+    text = pytesseract.image_to_string(adaptive_threshold, lang='chi_tra')
+    return text
 
 app = Flask(__name__)
 
@@ -80,21 +77,12 @@ def handle_image_message(event):
         return
     image_id = event.message.id
     image_content = line_bot_api.get_message_content(image_id)
-    image_file = BytesIO(image_content.content)
-    response = requests.post(
-        'https://api.ocr.space/parse/image',
-        files={'image': image_file},
-        data={'apikey': 'K83057456588957',
-              'language': 'chi_tra'}
-    )
-    response_data = response.json()
-    if response_data['OCRExitCode'] != 1:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="抱歉，無法識別圖片中的文字，請再試一次~")
-        )
-        return
-    text = response_data['ParsedResults'][0]['ParsedText']
+    image_data = np.asarray(bytearray(image_content.content), dtype=np.uint8)
+    img = cv2.imdecode(image_data, cv2.IMREAD_COLOR)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    adaptive_threshold = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+            cv2.THRESH_BINARY,11,2)
+    text = pytesseract.image_to_string(adaptive_threshold, lang='chi_tra')
     text = re.sub(r'\s+', '', text)
     line_bot_api.reply_message(
         event.reply_token,
