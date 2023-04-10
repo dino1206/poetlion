@@ -1,3 +1,4 @@
 Flask==2.2.2
 line-bot-sdk
 openai
+opencv-python-headless==4.5.4.58
