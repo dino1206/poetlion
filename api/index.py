@@ -22,7 +22,7 @@ def recognize_text_in_image(image_url):
     response = requests.post(
         'https://api.ocr.space/parse/image',
         files={'image': image_file},
-        data={'apikey': 'YOUR_API_KEY',
+        data={'apikey': line_bot_api,
               'language': 'chi_tra'}
     )
     response_data = response.json()
@@ -84,7 +84,7 @@ def handle_image_message(event):
     response = requests.post(
         'https://api.ocr.space/parse/image',
         files={'image': image_file},
-        data={'apikey': 'YOUR_API_KEY',
+        data={'apikey': line_bot_api,
               'language': 'chi_tra'}
     )
     response_data = response.json()
