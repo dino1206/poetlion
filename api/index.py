@@ -1,15 +1,15 @@
 import cv2
 import pytesseract
 import numpy as np
-import requests
 import os
 import re
 from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage,ImageMessage
+import requests
+from linebot import LineBotApi, WebhookHandler
 
-import os
+
 
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
