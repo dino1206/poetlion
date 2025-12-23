@@ -1,6 +1,6 @@
 <h1>POETLION｜開發人員網站</h1>
   <p>在字詞與程式之間，打造溫柔又實用的應用程式</p>
-</header>
+
 
 <div class="container">
 
@@ -39,5 +39,4 @@
   <p>© 2025 POETLION</p>
 </footer>
 
-</body>
-</html>
+
