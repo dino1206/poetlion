@@ -390,10 +390,15 @@
                         <span>👤</span>
                         <span id="my-nickname-display">設定暱稱</span>
                     </div>
+                    <button class="icon-btn" onclick="exportHistory()" title="下載對話紀錄"
+                        style="background:transparent; border:none; font-size:18px; color:#555; cursor:pointer;">📥</button>
+                    <button class="icon-btn" onclick="clearHistory()" title="清除紀錄"
+                        style="background:transparent; border:none; font-size:18px; color:#555; cursor:pointer;">🗑️</button>
+                    <div style="width:1px; height:20px; background:#ddd; margin:0 5px;"></div>
                     <button id="voice-btn" class="icon-btn" onclick="toggleVoice()" title="語音通話"
-                        style="background:transparent; border:none; font-size:20px; color:#555; margin-right:10px; cursor:pointer;">📞</button>
+                        style="background:transparent; border:none; font-size:20px; color:#555; cursor:pointer;">📞</button>
                     <button id="video-btn" class="icon-btn" onclick="toggleVideo()" title="視訊通話"
-                        style="background:transparent; border:none; font-size:20px; color:#555; margin-right:10px; cursor:pointer;">📹</button>
+                        style="background:transparent; border:none; font-size:20px; color:#555; cursor:pointer;">📹</button>
                     <!-- Sidebar removed for 1-on-1 -->
                 </div>
             </div>
@@ -497,9 +502,15 @@
 
         <script>
             // --- Config ---
+            // --- Config ---
+            // Room System
             const urlParams = new URLSearchParams(window.location.search);
             let roomId = urlParams.get('room');
             const entryModal = document.getElementById('entry-modal');
+
+            // History Key
+            const HISTORY_KEY = roomId ? ('chat_history_' + roomId) : null;
+            let localHistory = [];
 
             if (!roomId) {
                 // Show Entry Modal
@@ -514,10 +525,69 @@
                 if (roomId) {
                     const disp = document.getElementById('room-id-display');
                     if (disp) disp.innerText = roomId;
+                    // Load History
+                    loadHistory();
                     // Auto Start ONLY if room exists
                     initSystem();
                 }
             }, 500);
+
+            // --- History Functions ---
+            function loadHistory() {
+                if (!HISTORY_KEY) return;
+                try {
+                    const raw = localStorage.getItem(HISTORY_KEY);
+                    if (raw) {
+                        localHistory = JSON.parse(raw);
+                        // Replay UI
+                        localHistory.forEach(item => {
+                            if (item.type === 'system') {
+                                appendSystemMsg(item.text, false); // false = don't save again
+                            } else {
+                                appendMsg(item.sender, item.text, item.type, false);
+                            }
+                        });
+                        // Add divider
+                        if (localHistory.length > 0) {
+                            appendSystemMsg("--- 以上為歷史訊息 ---", false);
+                        }
+                    }
+                } catch (e) { console.error("Load history failed", e); }
+            }
+
+            function saveHistory(item) {
+                if (!HISTORY_KEY) return;
+                localHistory.push(item);
+                // Limit to last 500?
+                if (localHistory.length > 500) localHistory.shift();
+                localStorage.setItem(HISTORY_KEY, JSON.stringify(localHistory));
+            }
+
+            function clearHistory() {
+                if (confirm("確定要清除此房間的對話紀錄嗎？")) {
+                    localStorage.removeItem(HISTORY_KEY);
+                    localHistory = [];
+                    location.reload();
+                }
+            }
+
+            function exportHistory() {
+                if (localHistory.length === 0) {
+                    alert("尚無紀錄可匯出");
+                    return;
+                }
+                let content = "Chat Log - Room " + roomId + "\nGenerated: " + new Date().toLocaleString() + "\n\n";
+                localHistory.forEach(item => {
+                    content += `[${item.time}] ${item.sender}: ${item.text}\n`;
+                });
+
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ChatHistory_${roomId}_${new Date().toISOString().slice(0, 10)}.txt`;
+                a.click();
+            }
 
             function createRoom() {
                 // Generate Random 4-digit ID (1000-9999)
@@ -922,20 +992,23 @@
                         videoContainer.style.display = 'none';
                     }
 
+                    // Log Call Start
+                    appendSystemMsg((videoEnabled ? "視訊" : "語音") + "通話開始");
+
                     if (!isHost) {
-                        appendSystemMsg(videoEnabled ? "正在發起視訊..." : "正在呼叫主持人...");
+                        appendSystemMsg(videoEnabled ? "正在發起視訊..." : "正在呼叫主持人...", false);
                         const call = peer.call(LOBBY_ID, localStream);
                         handleCall(call);
                     } else {
                         // Host Broadcast
                         if (connections.length === 0) {
-                            appendSystemMsg("麥克風/鏡頭已開啟 (等待連線)");
+                            appendSystemMsg("麥克風/鏡頭已開啟 (等待連線)", false);
                         } else {
                             connections.forEach(c => {
                                 const call = peer.call(c.id, localStream);
                                 handleCall(call);
                             });
-                            appendSystemMsg("已開啟廣播");
+                            appendSystemMsg("已開啟廣播", false);
                         }
                     }
                 } catch (err) {
@@ -998,7 +1071,7 @@
                 updateVoiceBtn(false);
                 updateVideoBtn(false);
                 videoContainer.style.display = 'none';
-                appendSystemMsg("通話結束");
+                appendSystemMsg("通話結束"); // This auto-saves
             }
 
             function updateVoiceBtn(isActive) {
@@ -1019,6 +1092,7 @@
             // ===================================
             let screenStream = null;
             let screenCall = null;
+            let activeScreenCalls = []; // Track all outbound screen calls
             const screenShareBtn = document.getElementById('screen-share-btn');
 
             async function toggleScreenShare() {
@@ -1055,6 +1129,7 @@
                         // Guest shares to Host
                         screenCall = peer.call(LOBBY_ID, screenStream);
                         handleCall(screenCall);
+                        activeScreenCalls.push(screenCall);
                     } else {
                         // Host shares to all guests
                         if (connections.length === 0) {
@@ -1063,12 +1138,13 @@
                             connections.forEach(c => {
                                 const call = peer.call(c.id, screenStream);
                                 handleCall(call);
+                                activeScreenCalls.push(call);
                             });
                         }
                     }
                 } catch (err) {
                     console.error("Screen share failed:", err);
-                    if (err.name !== 'NotAllowedError') {
+                    if (err.name !== 'NotAllowedError') { // Don't alert if user cancelled
                         alert("螢幕分享失敗: " + err.message);
                     }
                     stopScreenShare();
@@ -1080,8 +1156,15 @@
                     screenStream.getTracks().forEach(t => t.stop());
                     screenStream = null;
                 }
+                // Close ALL active screen calls
+                if (activeScreenCalls.length > 0) {
+                    activeScreenCalls.forEach(call => {
+                        if (call && call.open) call.close();
+                    });
+                    activeScreenCalls = [];
+                }
                 if (screenCall) {
-                    screenCall.close();
+                    if (screenCall.open) screenCall.close();
                     screenCall = null;
                 }
                 updateScreenShareBtn(false);
@@ -1105,6 +1188,7 @@
                         broadcastUserList();
                     } else if (hostConn) {
                         hostConn.send({ type: 'updateName', nickname: myNickname });
+                        appendSystemMsg(`您已改名為 ${myNickname}`);
                     }
                 }
             }
@@ -1128,68 +1212,65 @@
                 msgInput.placeholder = "連線後方可輸入...";
             }
 
-            function addMessageUI(sender, text, isMe) {
-                const wrap = createMsgWrap(sender, isMe);
-                const bubble = createBubble(isMe);
-                bubble.innerText = text;
-                wrap.appendChild(bubble);
-                msgBox.appendChild(wrap);
-                msgBox.scrollTop = msgBox.scrollHeight;
-            }
-
-            function addImageUI(sender, imgSrc, isMe) {
-                const wrap = createMsgWrap(sender, isMe);
-                const bubble = createBubble(isMe);
-
-                const img = document.createElement('img');
-                img.src = imgSrc;
-                img.className = "chat-image";
-                img.onclick = () => {
-                    const w = window.open("");
-                    w.document.write(`<img src="${imgSrc}" style="max-width:100%">`);
-                };
-
-                bubble.appendChild(img);
-                wrap.appendChild(bubble);
-                msgBox.appendChild(wrap);
-                msgBox.scrollTop = msgBox.scrollHeight;
-            }
-
-            function createMsgWrap(sender, isMe) {
-                const wrap = document.createElement('div');
-                wrap.style.display = "flex";
-                wrap.style.flexDirection = "column";
-                wrap.style.alignItems = isMe ? "flex-end" : "flex-start";
-                wrap.style.marginBottom = "10px";
-                if (!isMe) {
-                    const name = document.createElement('div');
-                    name.className = "sender-name";
-                    name.innerText = sender;
-                    wrap.appendChild(name);
-                }
-                return wrap;
-            }
-
-            function createBubble(isMe) {
-                const bubble = document.createElement('div');
-                bubble.className = "msg-bubble";
-                bubble.style.background = isMe ? "#007bff" : "#fff";
-                bubble.style.color = isMe ? "white" : "#333";
-                if (!isMe) bubble.style.border = "1px solid #efefef";
-                return bubble;
-            }
-
-            function appendSystemMsg(text) {
+            function appendSystemMsg(text, save = true) {
                 const div = document.createElement('div');
-                div.style.textAlign = "center";
-                div.style.fontSize = "12px";
-                div.style.color = "#999";
-                div.style.margin = "10px 0";
+                div.style.textAlign = 'center';
+                div.style.fontSize = '12px';
+                div.style.color = '#aaa';
+                div.style.margin = '10px 0';
                 div.innerText = text;
                 msgBox.appendChild(div);
                 msgBox.scrollTop = msgBox.scrollHeight;
+
+                if (save) {
+                    const time = new Date().toLocaleString();
+                    saveHistory({ type: 'system', sender: 'System', text: text, time: time });
+                }
             }
 
+            function addMessageUI(sender, text, isMe) {
+                appendMsg(sender, text, isMe ? 'self' : 'text');
+            }
+
+            function addImageUI(sender, imgSrc, isMe) {
+                appendMsg(sender, imgSrc, isMe ? 'self' : 'text');
+            }
+
+            // Updated appendMsg with save flag
+            function appendMsg(sender, text, type = 'text', save = true) {
+                const isMe = (type === 'self');
+                const div = document.createElement('div');
+                div.className = 'msg-bubble';
+                // ... styling ...
+                div.style.alignSelf = isMe ? 'flex-end' : 'flex-start';
+                div.style.background = isMe ? '#007bff' : '#f1f0f0';
+                div.style.color = isMe ? 'white' : 'black';
+
+                // Sender Name (Always Show)
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'sender-name';
+                nameDiv.innerText = sender + " :";
+                if (isMe) nameDiv.style.color = "rgba(255,255,255,0.85)";
+                div.appendChild(nameDiv);
+
+                if (text.startsWith('data:image')) {
+                    const img = document.createElement('img');
+                    img.src = text;
+                    img.className = 'chat-image';
+                    img.onclick = () => window.open(text);
+                    div.appendChild(img);
+                } else {
+                    div.innerText += text;
+                }
+
+                msgBox.appendChild(div);
+                msgBox.scrollTop = msgBox.scrollHeight;
+
+                if (save) {
+                    const time = new Date().toLocaleString();
+                    saveHistory({ type: type, sender: sender, text: text, time: time });
+                }
+            }
             function showOverlay(title, desc, showSpinner) {
                 overlayTitle.innerText = title;
                 overlayDesc.innerText = desc;
