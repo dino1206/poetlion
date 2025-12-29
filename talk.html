@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>線上即時客服系統</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #f0f2f5;
+        }
+
+        #chat-app {
+            display: flex;
+            height: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 200px;
+            background: #f8f9fa;
+            border-left: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            background: #e9ecef;
+            font-weight: 600;
+            font-size: 14px;
+            color: #495057;
+            text-align: center;
+        }
+
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .user-item.is-me {
+            background: #e3f2fd;
+            font-weight: 500;
+        }
+
+        .role-badge {
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 4px;
+            margin-left: auto;
+            color: white;
+        }
+
+        .badge-host {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .badge-me {
+            background: #007bff;
+        }
+
+        .header {
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            flex-shrink: 0;
+            padding-top: max(10px, env(safe-area-inset-top));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .my-profile {
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .my-profile:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .status-bar {
+            padding: 6px 15px;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            align-items: center;
+        }
+
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+            margin-right: 6px;
+        }
+
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #fff;
+            font-size: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overscroll-behavior: contain;
+        }
+
+        .input-area {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid #eee;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            align-items: center;
+        }
+
+        input[type="text"] {
+            padding: 10px 15px;
+            border: 1px solid #dfe1e5;
+            border-radius: 20px;
+            outline: none;
+            font-size: 15px;
+            background: white;
+            flex: 1;
+        }
+
+        input[type="text"]:focus {
+            border-color: #007bff;
+        }
+
+        button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .icon-btn {
+            padding: 8px;
+            border-radius: 50%;
+            background: #e9ecef;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: #dee2e6;
+        }
+
+        .msg-bubble {
+            padding: 8px 12px;
+            border-radius: 14px;
+            max-width: 85%;
+            word-break: break-all;
+            line-height: 1.4;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+
+        .sender-name {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 2px;
+            padding-left: 2px;
+        }
+
+        .chat-image {
+            max-width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 5px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .mobile-toggle-users {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            #chat-app {
+                max-width: 100%;
+            }
+
+            .sidebar,
+            .mobile-toggle-users {
+                display: none !important;
+            }
+        }
+
+        .mobile-sidebar-close {
+            display: none;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 0 10px;
+        }
+
+        #overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Crop Modal Styles */
+        #crop-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #crop-container {
+            position: relative;
+            max-width: 90%;
+            max-height: 80%;
+            background: #333;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        #crop-canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        #crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            cursor: crosshair;
+        }
+
+        #crop-selection {
+            position: absolute;
+            border: 2px dashed #00ff00;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            display: none;
+            pointer-events: none;
+            /* Let clicks pass through to overlay */
+        }
+
+        #crop-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+        }
+
+        #video-container {
+            display: none;
+            /* Hidden by default */
+            position: fixed;
+            top: 60px;
+            /* Below header */
+            left: 0;
+            right: 0;
+            bottom: 60px;
+            /* Above status/input */
+            background: #000;
+            z-index: 5;
+            /* Below Overlay (100) but above chat messages? */
+            /* If we want chat to overlay video, we need chat z-index higher. 
+               Let's make video cover chat for now, or maybe split screen? 
+               User requested "Large Remote, Small Local". 
+               Let's try covering chat area. */
+        }
+
+        #remote-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transform-origin: center center;
+        }
+
+        #local-video {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 40px;
+            height: 54px;
+            background: #333;
+            border: 2px solid #fff;
+            border-radius: 8px;
+            object-fit: cover;
+            z-index: 6;
+        }
+
+        /* When video is active, maybe hide messages? or overlay? */
+        /* Let's keep it simple: Video overlaps messages area. */
+    </style>
+</head>
+
+<body>
+
+    <div id="chat-app">
+
+        <div class="main-area">
+            <div class="header">
+                <div>
+                    <h3 style="margin:0;">1對1 即時客服</h3>
+                    <div style="font-size: 11px; opacity: 0.8; cursor: pointer;" onclick="copyRoomLink()"
+                        title="點擊複製連結">
+                        房號: <span id="room-id-display">...</span> 📋
+                    </div>
+                </div>
+                <div style="display:flex; gap: 10px; align-items: center;">
+                    <div class="my-profile" onclick="changeNickname()">
+                        <span>👤</span>
+                        <span id="my-nickname-display">設定暱稱</span>
+                    </div>
+                    <button id="voice-btn" class="icon-btn" onclick="toggleVoice()" title="語音通話"
+                        style="background:transparent; border:none; font-size:20px; color:#555; margin-right:10px; cursor:pointer;">📞</button>
+                    <button id="video-btn" class="icon-btn" onclick="toggleVideo()" title="視訊通話"
+                        style="background:transparent; border:none; font-size:20px; color:#555; margin-right:10px; cursor:pointer;">📹</button>
+                    <!-- Sidebar removed for 1-on-1 -->
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <span class="conn-dot" id="conn-status-indicator"></span>
+                <span id="status-text">初始化...</span>
+            </div>
+
+            <div id="video-container">
+                <video id="remote-video" autoplay playsinline></video>
+                <video id="local-video" autoplay playsinline muted></video>
+            </div>
+
+            <div id="messages">
+                <div style="text-align: center; color: #aaa; font-size: 12px; margin-top: 20px;">
+                    系統：歡迎使用。<br>正在連接伺服器...
+                </div>
+            </div>
+
+            <div class="input-area">
+                <button id="screen-share-btn" class="icon-btn" onclick="toggleScreenShare()" title="分享螢幕">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 3h20v14H2z" />
+                        <path d="M8 21h8" />
+                        <path d="M12 17v4" />
+                    </svg>
+                </button>
+                <input type="text" id="message-input" placeholder="連線中..." disabled>
+                <button id="send-btn" style="background: #007bff; color: white;" disabled>傳送</button>
+            </div>
+        </div>
+
+        <!-- Sidebar removed for 1-on-1 -->
+
+        <!-- Connection Overlay -->
+        <div id="overlay">
+            <div
+                style="background:white; padding:20px; border-radius:12px; text-align:center; max-width:90%; width:320px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <div id="overlay-spinner" class="conn-dot"
+                    style="width:40px; height:40px; border-radius:50%; background:#007bff; margin:0 auto 15px; animation: pulse 1s infinite alternate;">
+                </div>
+                <h3 id="overlay-title" style="margin:0 0 10px; font-size:18px;">連線中...</h3>
+                <p id="overlay-desc" style="margin:0 0 20px; color:#666; font-size:14px; line-height:1.4;">正在初始化...</p>
+
+                <div id="overlay-actions" style="display:none; flex-direction:column; gap:10px;">
+                    <button onclick="manualBecomeHost()"
+                        style="width:100%; background:#ffc107; color:#333; padding:10px; border-radius:8px; border:none; cursor:pointer; font-weight:bold;">直接成為主持人</button>
+                    <button onclick="manualRetry()"
+                        style="width:100%; background:#f1f3f5; color:#333; padding:10px; border-radius:8px; border:none; cursor:pointer;">重試連線</button>
+                </div>
+
+                <button id="overlay-retry-btn" onclick="manualRetry()"
+                    style="display:none; width:100%; background:#007bff; color:white; padding:10px; border-radius:8px; border:none; cursor:pointer;">重試連線</button>
+            </div>
+        </div>
+
+        <!-- Crop Modal -->
+        <div id="crop-modal">
+            <div id="crop-container">
+                <canvas id="crop-canvas"></canvas>
+                <div id="crop-overlay"></div>
+                <div id="crop-selection"></div>
+            </div>
+            <div id="crop-controls">
+                <button onclick="confirmCrop()" style="background: #28a745; color: white;">確認傳送</button>
+                <button onclick="closeCropModal()" style="background: #dc3545; color: white;">取消</button>
+            </div>
+        </div>
+
+        <!-- Entry Modal (Select or Create Room) -->
+        <div id="entry-modal"
+            style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(240,242,245,1); z-index:999; flex-direction:column; justify-content:center; align-items:center;">
+            <div
+                style="background:white; padding:30px; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.1); width:90%; max-width:360px; text-align:center;">
+                <div style="font-size:40px; margin-bottom:10px;">💬</div>
+                <h2 style="margin:0 0 10px; color:#333;">歡迎使用</h2>
+                <p style="color:#666; margin-bottom:25px; font-size:14px;">請選擇開啟新聊天室或加入現有對話</p>
+
+                <button onclick="createRoom()"
+                    style="width:100%; padding:12px; background:#007bff; color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-bottom:20px; box-shadow:0 4px 6px rgba(0,123,255,0.2);">
+                    ✨ 建立新聊天室
+                </button>
+
+                <div style="position:relative; margin: 20px 0;">
+                    <hr style="border:none; border-top:1px solid #eee;">
+                    <span
+                        style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:white; padding:0 10px; color:#999; font-size:12px;">或</span>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="entry-room-id" placeholder="輸入房號 (例如 1234)"
+                        style="flex:1; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:15px; outline:none; text-transform:uppercase;">
+                    <button onclick="joinRoom()"
+                        style="padding:12px 20px; background:#e9ecef; color:#333; border:none; border-radius:8px; font-weight:600; cursor:pointer;">加入</button>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+        <script>
+            // --- Config ---
+            const urlParams = new URLSearchParams(window.location.search);
+            let roomId = urlParams.get('room');
+            const entryModal = document.getElementById('entry-modal');
+
+            if (!roomId) {
+                // Show Entry Modal
+                entryModal.style.display = 'flex';
+            }
+
+            const LOBBY_ID = roomId ? ("CHAT_LOBBY_" + roomId) : null;
+            if (roomId) document.title = `客服 (${roomId})`;
+
+            // Update UI (Room ID Display checks for null)
+            setTimeout(() => {
+                if (roomId) {
+                    const disp = document.getElementById('room-id-display');
+                    if (disp) disp.innerText = roomId;
+                    // Auto Start ONLY if room exists
+                    initSystem();
+                }
+            }, 500);
+
+            function createRoom() {
+                // Generate Random 4-digit ID (1000-9999)
+                const newId = Math.floor(1000 + Math.random() * 9000).toString();
+                window.location.search = '?room=' + newId;
+            }
+
+            function joinRoom() {
+                const input = document.getElementById('entry-room-id');
+                const val = input.value.trim(); // No need for uppercase if numbers
+                if (val) {
+                    window.location.search = '?room=' + val;
+                } else {
+                    alert("請輸入房號！");
+                }
+            }
+
+            function copyRoomLink() {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url).then(() => {
+                    alert("已複製聊天室連結：" + url);
+                });
+            }
+
+
+            // --- UI Refs ---
+            const statusText = document.getElementById('status-text');
+            const statusIndicator = document.getElementById('conn-status-indicator');
+            const nicknameDisplay = document.getElementById('my-nickname-display');
+            const userListContainer = document.getElementById('user-list-container');
+            const userCountDisplay = document.getElementById('user-count');
+            const msgInput = document.getElementById('message-input');
+            const sendBtn = document.getElementById('send-btn');
+            const msgBox = document.getElementById('messages');
+
+            // Overlay
+            const overlay = document.getElementById('overlay');
+            const overlayTitle = document.getElementById('overlay-title');
+            const overlayDesc = document.getElementById('overlay-desc');
+            const overlaySpinner = document.getElementById('overlay-spinner');
+            const overlayRetryBtn = document.getElementById('overlay-retry-btn');
+            const overlayActions = document.getElementById('overlay-actions');
+
+            // Crop UI
+            const cropModal = document.getElementById('crop-modal');
+            const cropCanvas = document.getElementById('crop-canvas');
+            const cropOverlay = document.getElementById('crop-overlay');
+            const cropSelection = document.getElementById('crop-selection');
+
+            // --- State ---
+            let peer = null;
+            let isHost = false;
+            let myId = "";
+            let myNickname = "訪客";
+
+            let connections = []; // Host only
+            let guestCounter = 0; // Host only
+            let hostConn = null;  // Client only
+            let connTimeoutTimer = null;
+            let initSafetyTimer = null;
+
+            // --- Crop State ---
+            let rawCanvas = null;
+            let isSelecting = false;
+            let startX, startY, endX, endY;
+
+            // ===================================
+            // Init
+            // ===================================
+            function initSystem() {
+                showOverlay("正在連線...", "正在連接大廳伺服器...", true);
+
+                if (initSafetyTimer) clearTimeout(initSafetyTimer);
+                initSafetyTimer = setTimeout(() => {
+                    if (statusText.innerText.includes("初始化") || statusText.innerText.includes("連線中")) {
+                        showOverlay("連線逾時", "無法連接伺服器，可能防火牆阻擋或網路問題。", false);
+                        overlayRetryBtn.style.display = "inline-block";
+                    }
+                }, 10000);
+
+                tryRegisterAsHost();
+            }
+
+            // 1. 嘗試成為 Host
+            let retryHostCount = 0;
+
+            function tryRegisterAsHost() {
+                if (peer) peer.destroy();
+
+                peer = new Peer(LOBBY_ID, {
+                    config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] },
+                    debug: 1
+                });
+
+                peer.on('open', (id) => {
+                    // [SUCCESS] I am Host
+                    isHost = true;
+                    myId = id;
+                    myNickname = (myNickname === "訪客" || myNickname.startsWith("路人")) ? "主持人" : myNickname;
+                    guestCounter = 0;
+                    connections = [];
+
+                    updateStatus("我是主持人", "#28a745");
+                    hideOverlay();
+                    enableChatUI();
+                    appendSystemMsg("聊天室已建立 (您是主持人)");
+
+                    refreshHostUserList();
+                    retryHostCount = 0;
+                });
+
+                peer.on('error', (err) => {
+                    if (err.type === 'unavailable-id') {
+                        // [FAIL] Host exists
+                        retryHostCount++;
+                        console.log(`Lobby taken (Attempt ${retryHostCount})...`);
+
+                        if (retryHostCount < 3) {
+                            statusText.innerText = `搶奪主持人席位中 (${retryHostCount}/3)...`;
+                            setTimeout(tryRegisterAsHost, 1500);
+                        } else {
+                            console.log('Becoming client...');
+                            retryHostCount = 0;
+                            becomeClient();
+                        }
+                    } else {
+                        console.error(err);
+                        if (err.type !== 'peer-unavailable') {
+                            statusText.innerText = "Error: " + err.type;
+                        }
+                    }
+                });
+
+                setupPeerEvents();
+            }
+
+            function becomeClient() {
+                if (peer) peer.destroy();
+                const clientId = "user_" + Math.random().toString(36).substr(2, 9);
+                peer = new Peer(clientId, {
+                    config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] },
+                    debug: 1
+                });
+
+                peer.on('open', (id) => {
+                    isHost = false;
+                    myId = id;
+                    updateStatus("連線中...", "#ffc107");
+                    connectToHost();
+                });
+
+                setupPeerEvents();
+            }
+
+            function connectToHost() {
+                if (connTimeoutTimer) clearTimeout(connTimeoutTimer);
+
+                const conn = peer.connect(LOBBY_ID, { reliable: true });
+
+                // Connection Timeout (Host Unresponsive / Ghost)
+                connTimeoutTimer = setTimeout(() => {
+                    if (!conn.open) {
+                        console.warn("Connection timeout.");
+                        conn.close();
+                        handleHostDisconnect(true);
+                    }
+                }, 8000);
+
+                conn.on('open', () => {
+                    clearTimeout(connTimeoutTimer);
+                    hostConn = conn;
+                    hideOverlay();
+                    updateStatus("已連線", "#28a745");
+                    enableChatUI();
+                    if (myNickname !== "訪客") {
+                        conn.send({ type: 'updateName', nickname: myNickname });
+                    }
+                });
+
+                conn.on('data', (data) => handleDataReceived(data, conn));
+                conn.on('close', () => handleHostDisconnect(false));
+                conn.on('error', () => handleHostDisconnect(false));
+            }
+
+            function handleHostDisconnect(isTimeout = false) {
+                if (connTimeoutTimer) clearTimeout(connTimeoutTimer);
+
+                updateStatus(isTimeout ? "連線逾時" : "主持人已離開", "#dc3545");
+                disableChatUI();
+
+                let title = "連線中斷";
+                let desc = "主持人已離開，請選擇下一步：";
+
+                if (isTimeout) {
+                    title = "無法連線";
+                    desc = "主持人無回應 (可能是幽靈 ID)，建議您直接接管聊天室。";
+                }
+
+                // Show Manual Choice Overlay
+                showOverlay(title, desc, false);
+                overlayActions.style.display = "flex";
+                overlaySpinner.style.display = "none";
+                overlayRetryBtn.style.display = "none";
+            }
+
+            function manualBecomeHost() {
+                overlayActions.style.display = "none";
+                showOverlay("正在搶奪主持人...", "嘗試註冊 Lobby ID 中...", true);
+                if (peer) peer.destroy();
+                setTimeout(() => {
+                    tryRegisterAsHost();
+                }, 500);
+            }
+
+            function manualRetry() {
+                overlayActions.style.display = "none";
+                showOverlay("重試連線...", "正在重新連接...", true);
+                setTimeout(() => {
+                    becomeClient();
+                }, 500);
+            }
+
+            function setupPeerEvents() {
+                peer.on('connection', (conn) => {
+                    if (isHost) handleIncomingGuest(conn);
+                    else conn.close();
+                });
+                peer.on('disconnected', () => {
+                    updateStatus("網路已斷開", "#dc3545");
+                    peer.reconnect();
+                });
+                peer.on('call', (call) => handleIncomingCall(call));
+            }
+
+            function handleIncomingGuest(conn) {
+                conn.on('open', () => {
+                    guestCounter++;
+                    const defaultName = "路人" + guestCounter;
+                    connections.push({ conn: conn, id: conn.peer, nickname: defaultName });
+
+                    conn.send({ type: 'welcome', assignedName: defaultName });
+                    const msg = `${defaultName} 加入了`;
+                    broadcast({ type: 'system', text: msg });
+                    appendSystemMsg(msg);
+                    broadcastUserList();
+
+                    // If Host is broadcasting (Mic on), call new guest
+                    if (localStream) {
+                        const call = peer.call(conn.peer, localStream);
+                        handleCall(call);
+                    }
+                });
+
+                conn.on('data', (data) => {
+                    if (data.type === 'chat' || data.type === 'image') {
+                        const guest = connections.find(c => c.conn === conn);
+                        if (guest) guest.nickname = data.nickname;
+
+                        broadcast(data, conn);
+                        if (data.type === 'chat') addMessageUI(data.nickname, data.text, false);
+                        if (data.type === 'image') addImageUI(data.nickname, data.image, false);
+                    }
+                    if (data.type === 'updateName') {
+                        const guest = connections.find(c => c.conn === conn);
+                        if (guest) {
+                            const oldName = guest.nickname;
+                            guest.nickname = data.nickname;
+                            broadcast({ type: 'system', text: `${oldName} 改名為 ${data.nickname}` });
+                            appendSystemMsg(`${oldName} 改名為 ${data.nickname}`);
+                            broadcastUserList();
+                        }
+                    }
+                });
+
+                conn.on('close', () => {
+                    const guest = connections.find(c => c.conn === conn);
+                    connections = connections.filter(c => c.conn !== conn);
+                    if (guest) {
+                        broadcast({ type: 'system', text: `${guest.nickname} 離開了` });
+                        appendSystemMsg(`${guest.nickname} 離開了`);
+                    }
+                    broadcastUserList();
+                });
+            }
+
+            function handleDataReceived(data, fromConn) {
+                if (!data) return;
+                if (data.type === 'welcome') {
+                    if (myNickname === "訪客" || myNickname.startsWith("路人")) myNickname = data.assignedName;
+                    else if (hostConn) hostConn.send({ type: 'updateName', nickname: myNickname });
+                    updateNicknameUI();
+                    appendSystemMsg(`系統：歡迎加入，您的代號是 ${myNickname}`);
+                }
+                if (data.type === 'chat') addMessageUI(data.nickname, data.text, false);
+                if (data.type === 'image') addImageUI(data.nickname, data.image, false);
+                if (data.type === 'system') appendSystemMsg(data.text);
+                if (data.type === 'userList') renderUserList(data.list);
+            }
+
+            function broadcastUserList() {
+                if (!isHost) return;
+                const list = [
+                    { id: myId, nickname: myNickname, isHost: true },
+                    ...connections.map(c => ({ id: c.id, nickname: c.nickname, isHost: false }))
+                ];
+                broadcast({ type: 'userList', list: list });
+                renderUserList(list);
+            }
+
+            function refreshHostUserList() { if (isHost) broadcastUserList(); }
+
+            function broadcast(payload, excludeConn = null) {
+                if (!isHost) return;
+                connections.forEach(c => {
+                    if (c.conn !== excludeConn && c.conn.open) c.conn.send(payload);
+                });
+            }
+
+            function renderUserList(list) {
+                userCountDisplay.innerText = list.length;
+                userListContainer.innerHTML = "";
+                list.forEach(u => {
+                    const div = document.createElement('div');
+                    const isMe = (u.id === myId);
+                    div.className = "user-item" + (isMe ? " is-me" : "");
+
+                    let badges = "";
+                    if (u.isHost) badges += `<span class="role-badge badge-host">主持人</span>`;
+                    if (isMe) badges += `<span class="role-badge badge-me">我</span>`;
+
+                    div.innerHTML = `
+            <div style="width:24px; text-align:center; margin-right:5px;">👤</div>
+            <div>${escapeHtml(u.nickname)}</div>
+            <div style="margin-left:auto; display:flex; gap:3px;">${badges}</div>
+            `;
+                    userListContainer.appendChild(div);
+                });
+            }
+
+            function doSend() {
+                const text = msgInput.value.trim();
+                if (!text) return;
+                const payload = { type: 'chat', sender: myId, nickname: myNickname, text: text, time: Date.now() };
+                addMessageUI("我", text, true);
+                msgInput.value = "";
+                if (isHost) broadcast(payload);
+                else if (hostConn && hostConn.open) hostConn.send(payload);
+            }
+
+            // ===================================
+            // Voice & Video Chat Logic
+            // ===================================
+            let localStream = null;
+            let currentCall = null;
+            const voiceBtn = document.getElementById('voice-btn');
+            const videoBtn = document.getElementById('video-btn');
+            const videoContainer = document.getElementById('video-container');
+            const remoteVideo = document.getElementById('remote-video');
+            const localVideo = document.getElementById('local-video');
+
+            async function toggleVoice() {
+                if (localStream && !localStream.getVideoTracks().length) {
+                    endCall();
+                } else {
+                    startCall(false);
+                }
+            }
+
+            async function toggleVideo() {
+                if (localStream && localStream.getVideoTracks().length > 0) {
+                    endCall();
+                } else {
+                    startCall(true);
+                }
+            }
+
+            async function startCall(videoEnabled) {
+                try {
+                    if (currentCall) {
+                        currentCall.close();
+                        currentCall = null;
+                    }
+                    if (localStream) {
+                        localStream.getTracks().forEach(t => t.stop());
+                    }
+
+                    // Get Media
+                    const constraints = {
+                        audio: true,
+                        video: videoEnabled ? { facingMode: "user" } : false
+                    };
+                    localStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+                    // Update UI Buttons
+                    updateVoiceBtn(true);
+                    updateVideoBtn(videoEnabled);
+
+                    if (videoEnabled) {
+                        videoContainer.style.display = 'block';
+                        localVideo.srcObject = localStream;
+                    } else {
+                        videoContainer.style.display = 'none';
+                    }
+
+                    if (!isHost) {
+                        appendSystemMsg(videoEnabled ? "正在發起視訊..." : "正在呼叫主持人...");
+                        const call = peer.call(LOBBY_ID, localStream);
+                        handleCall(call);
+                    } else {
+                        // Host Broadcast
+                        if (connections.length === 0) {
+                            appendSystemMsg("麥克風/鏡頭已開啟 (等待連線)");
+                        } else {
+                            connections.forEach(c => {
+                                const call = peer.call(c.id, localStream);
+                                handleCall(call);
+                            });
+                            appendSystemMsg("已開啟廣播");
+                        }
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("無法取得媒體權限: " + err);
+                    endCall();
+                }
+            }
+
+            function handleIncomingCall(call) {
+                if (localStream) {
+                    call.answer(localStream);
+                } else {
+                    call.answer();
+                }
+                handleCall(call);
+            }
+
+            function handleCall(call) {
+                if (currentCall && currentCall !== call) {
+                    // cleanup
+                }
+                currentCall = call;
+
+                call.on('stream', (remoteStream) => {
+                    if (remoteStream.getVideoTracks().length > 0) {
+                        videoContainer.style.display = 'block';
+                        remoteVideo.srcObject = remoteStream;
+                    } else {
+                        const audio = document.createElement('audio');
+                        audio.srcObject = remoteStream;
+                        audio.autoplay = true;
+                        document.body.appendChild(audio);
+                        call.audioEl = audio;
+                    }
+                });
+
+                call.on('close', () => {
+                    if (call.audioEl) call.audioEl.remove();
+                    if (currentCall === call) {
+                        currentCall = null;
+                        videoContainer.style.display = 'none';
+                    }
+                });
+
+                call.on('error', (err) => {
+                    console.error("Call error:", err);
+                });
+            }
+
+            function endCall() {
+                if (currentCall) {
+                    currentCall.close();
+                    currentCall = null;
+                }
+                if (localStream) {
+                    localStream.getTracks().forEach(t => t.stop());
+                    localStream = null;
+                }
+                updateVoiceBtn(false);
+                updateVideoBtn(false);
+                videoContainer.style.display = 'none';
+                appendSystemMsg("通話結束");
+            }
+
+            function updateVoiceBtn(isActive) {
+                voiceBtn.style.background = isActive ? "#28a745" : "transparent";
+                voiceBtn.style.color = isActive ? "white" : "#555";
+                voiceBtn.innerText = isActive ? "🎙️" : "📞";
+                voiceBtn.title = isActive ? "點擊掛斷" : "發起語音";
+            }
+
+            function updateVideoBtn(isActive) {
+                videoBtn.style.background = isActive ? "#28a745" : "transparent";
+                videoBtn.style.color = isActive ? "white" : "#555";
+                videoBtn.title = isActive ? "關閉視訊" : "開啟視訊";
+            }
+
+            // ===================================
+            // Screen Sharing Logic
+            // ===================================
+            let screenStream = null;
+            let screenCall = null;
+            const screenShareBtn = document.getElementById('screen-share-btn');
+
+            async function toggleScreenShare() {
+                if (screenStream) {
+                    stopScreenShare();
+                } else {
+                    startScreenShare();
+                }
+            }
+
+            async function startScreenShare() {
+                // Check for Mobile / Support
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                    alert("抱歉，您的裝置或瀏覽器不支援螢幕分享功能 (通常為手機限制)。");
+                    return;
+                }
+
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { cursor: "always" },
+                        audio: false
+                    });
+
+                    // Auto-stop when user stops sharing via browser UI
+                    screenStream.getVideoTracks()[0].onended = () => {
+                        stopScreenShare();
+                    };
+
+                    updateScreenShareBtn(true);
+                    appendSystemMsg("螢幕分享已開始");
+
+                    // Send screen stream to remote peer(s)
+                    if (!isHost) {
+                        // Guest shares to Host
+                        screenCall = peer.call(LOBBY_ID, screenStream);
+                        handleCall(screenCall);
+                    } else {
+                        // Host shares to all guests
+                        if (connections.length === 0) {
+                            appendSystemMsg("目前沒有訪客，無法分享螢幕");
+                        } else {
+                            connections.forEach(c => {
+                                const call = peer.call(c.id, screenStream);
+                                handleCall(call);
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.error("Screen share failed:", err);
+                    if (err.name !== 'NotAllowedError') {
+                        alert("螢幕分享失敗: " + err.message);
+                    }
+                    stopScreenShare();
+                }
+            }
+
+            function stopScreenShare() {
+                if (screenStream) {
+                    screenStream.getTracks().forEach(t => t.stop());
+                    screenStream = null;
+                }
+                if (screenCall) {
+                    screenCall.close();
+                    screenCall = null;
+                }
+                updateScreenShareBtn(false);
+                appendSystemMsg("螢幕分享已停止");
+            }
+
+            function updateScreenShareBtn(isActive) {
+                screenShareBtn.style.background = isActive ? "#28a745" : "transparent";
+                screenShareBtn.style.color = isActive ? "white" : "#555";
+                screenShareBtn.title = isActive ? "停止分享" : "分享螢幕";
+            }
+            function changeNickname() {
+                const newName = prompt("請輸入新暱稱：", myNickname);
+                if (newName && newName.trim()) {
+                    myNickname = newName.trim();
+                    updateNicknameUI();
+
+                    if (isHost) {
+                        broadcast({ type: 'system', text: `主持人改名為 ${myNickname}` });
+                        appendSystemMsg(`主持人改名為 ${myNickname}`);
+                        broadcastUserList();
+                    } else if (hostConn) {
+                        hostConn.send({ type: 'updateName', nickname: myNickname });
+                    }
+                }
+            }
+
+            function updateNicknameUI() { nicknameDisplay.innerText = myNickname; }
+
+            function updateStatus(text, color) {
+                statusText.innerHTML = `<span class="conn-dot" style="background: ${color}"></span> ${text}`;
+            }
+
+            function enableChatUI() {
+                msgInput.disabled = false;
+                sendBtn.disabled = false;
+                msgInput.placeholder = "輸入訊息...";
+                msgInput.focus();
+            }
+
+            function disableChatUI() {
+                msgInput.disabled = true;
+                sendBtn.disabled = true;
+                msgInput.placeholder = "連線後方可輸入...";
+            }
+
+            function addMessageUI(sender, text, isMe) {
+                const wrap = createMsgWrap(sender, isMe);
+                const bubble = createBubble(isMe);
+                bubble.innerText = text;
+                wrap.appendChild(bubble);
+                msgBox.appendChild(wrap);
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }
+
+            function addImageUI(sender, imgSrc, isMe) {
+                const wrap = createMsgWrap(sender, isMe);
+                const bubble = createBubble(isMe);
+
+                const img = document.createElement('img');
+                img.src = imgSrc;
+                img.className = "chat-image";
+                img.onclick = () => {
+                    const w = window.open("");
+                    w.document.write(`<img src="${imgSrc}" style="max-width:100%">`);
+                };
+
+                bubble.appendChild(img);
+                wrap.appendChild(bubble);
+                msgBox.appendChild(wrap);
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }
+
+            function createMsgWrap(sender, isMe) {
+                const wrap = document.createElement('div');
+                wrap.style.display = "flex";
+                wrap.style.flexDirection = "column";
+                wrap.style.alignItems = isMe ? "flex-end" : "flex-start";
+                wrap.style.marginBottom = "10px";
+                if (!isMe) {
+                    const name = document.createElement('div');
+                    name.className = "sender-name";
+                    name.innerText = sender;
+                    wrap.appendChild(name);
+                }
+                return wrap;
+            }
+
+            function createBubble(isMe) {
+                const bubble = document.createElement('div');
+                bubble.className = "msg-bubble";
+                bubble.style.background = isMe ? "#007bff" : "#fff";
+                bubble.style.color = isMe ? "white" : "#333";
+                if (!isMe) bubble.style.border = "1px solid #efefef";
+                return bubble;
+            }
+
+            function appendSystemMsg(text) {
+                const div = document.createElement('div');
+                div.style.textAlign = "center";
+                div.style.fontSize = "12px";
+                div.style.color = "#999";
+                div.style.margin = "10px 0";
+                div.innerText = text;
+                msgBox.appendChild(div);
+                msgBox.scrollTop = msgBox.scrollHeight;
+            }
+
+            function showOverlay(title, desc, showSpinner) {
+                overlayTitle.innerText = title;
+                overlayDesc.innerText = desc;
+                overlaySpinner.style.display = showSpinner ? "block" : "none";
+                overlay.style.display = "flex";
+            }
+
+            function hideOverlay() {
+                overlay.style.display = "none";
+            }
+
+            function escapeHtml(text) {
+                if (!text) return text;
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            }
+
+            function toggleSidebar() {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('active');
+            }
+
+            // Input Events
+            sendBtn.onclick = doSend;
+            msgInput.onkeypress = (e) => {
+                if (e.key === 'Enter') doSend();
+            };
+
+            // Explicit Disconnect on Window Close
+            window.addEventListener('beforeunload', () => {
+                if (peer) {
+                    peer.destroy();
+                }
+            });
+
+            // Auto Start
+            // Auto Start handled by initLogic above
+            // setTimeout(initSystem, 500);
+            // ===================================
+            // Mobile Pinch-to-Zoom Logic
+            // ===================================
+            let zoomScale = 1;
+            let panning = false;
+            let pzPointX = 0, pzPointY = 0;
+            let pzStartX = 0, pzStartY = 0;
+            let initialPinchDist = 0;
+            let initialScale = 1;
+
+            // Prevent default touch actions (scrolling/zooming page) on the container
+            videoContainer.style.touchAction = "none";
+
+            // Helper: Calculate distance between two touches
+            function getDistance(t1, t2) {
+                const dx = t1.clientX - t2.clientX;
+                const dy = t1.clientY - t2.clientY;
+                return Math.hypot(dx, dy);
+            }
+
+            function updateTransform() {
+                // Limit scale
+                zoomScale = Math.min(Math.max(1, zoomScale), 5); // 1x to 5x
+                remoteVideo.style.transform = `translate(${pzPointX}px, ${pzPointY}px) scale(${zoomScale})`;
+            }
+
+            // TOUCH START
+            videoContainer.addEventListener('touchstart', (e) => {
+                gesturePerformed = false; // Reset gesture flag
+                if (e.touches.length === 1) {
+                    // Pan Start
+                    panning = true;
+                    pzStartX = e.touches[0].clientX - pzPointX;
+                    pzStartY = e.touches[0].clientY - pzPointY;
+                } else if (e.touches.length === 2) {
+                    // Pinch Start
+                    panning = false;
+                    initialPinchDist = getDistance(e.touches[0], e.touches[1]);
+                    initialScale = zoomScale;
+                }
+            }, { passive: false });
+
+            // TOUCH MOVE
+            videoContainer.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                gesturePerformed = true; // Mark as gesture (not a tap)
+
+                if (e.touches.length === 1 && panning) {
+                    // Pan
+                    pzPointX = e.touches[0].clientX - pzStartX;
+                    pzPointY = e.touches[0].clientY - pzStartY;
+                    updateTransform();
+                } else if (e.touches.length === 2) {
+                    // Pinch
+                    const currentDist = getDistance(e.touches[0], e.touches[1]);
+                    if (initialPinchDist > 0) {
+                        const ratio = currentDist / initialPinchDist;
+                        zoomScale = initialScale * ratio;
+                        updateTransform();
+                    }
+                }
+            }, { passive: false });
+
+            // TOUCH END
+            videoContainer.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) initialPinchDist = 0;
+                if (e.touches.length === 0) panning = false;
+            });
+
+            // Double Tap to Reset
+            let lastTap = 0;
+            let gesturePerformed = false; // Add variable declaration
+
+            videoContainer.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+
+                // Only trigger reset if it was a quick tap AND NOT a drag/pinch gesture
+                if (tapLength < 300 && tapLength > 0 && !gesturePerformed) {
+                    // Double tap detected
+                    zoomScale = 1;
+                    pzPointX = 0;
+                    pzPointY = 0;
+                    updateTransform();
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            });
+
+            // Mouse Wheel (for Testing on Desktop)
+            videoContainer.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = -Math.sign(e.deltaY) * 0.1;
+                zoomScale += delta;
+                updateTransform();
+            }, { passive: false });
+
+        </script>
+
+</body>
+
+</html>
