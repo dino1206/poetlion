@@ -34,7 +34,12 @@
         N3 Vocabulary
       </a>
     </li>
-
+        <li>
+      <a href="https://play.google.com/store/apps/details?id=com.quicknav.widget"
+         target="_blank" rel="noopener">
+        一鍵發 Just Nav Widget
+      </a>
+    </li>
     
   </ul>
 
